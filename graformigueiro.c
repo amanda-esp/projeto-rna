@@ -84,6 +84,9 @@ void inserindoDistanciasRelativas(Grafo g, int dest, int distanciasRelativas[]) 
     srand(time(NULL));
     for(int i=0; i<g->Gmax; i++) {
         distanciasRelativas[i] = rand()%100;
+        if(distanciasRelativas[i] == 0 && i != dest) {
+            distanciasRelativas[i]++;
+        }
         printf("Distancia relativa de %d para %d: %d\n", i, dest, distanciasRelativas[i]);
     }
     distanciasRelativas[dest] = 0;
@@ -91,6 +94,7 @@ void inserindoDistanciasRelativas(Grafo g, int dest, int distanciasRelativas[]) 
 }
 
 int dfs(Grafo g, int orig, int dest) {
+    printf("=====DFS=====\n");
     if(g == NULL)
         return 0;
     int pilha[g->Gmax], topo=0, visitados[g->Gmax];
@@ -120,6 +124,7 @@ int dfs(Grafo g, int orig, int dest) {
 }
 
 int bfs(Grafo g, int orig, int dest) {
+    printf("=====BFS=====\n");
     if(g == NULL)
         return 0;
     int fila[g->Gmax], inicio=0, fim=0, visitados[g->Gmax];
@@ -147,6 +152,7 @@ int bfs(Grafo g, int orig, int dest) {
 }
 
 int gulosa(Grafo g, int orig, int dest, int distanciasRel[]) {
+    printf("=====GULOSA=====\n");
     if(g == NULL)
         return 0;
     if(orig == dest)
@@ -157,26 +163,55 @@ int gulosa(Grafo g, int orig, int dest, int distanciasRel[]) {
     }
     visitados[orig] = 1;
     pilha[topo++] = orig;
-    int custo=distanciasRel[orig], flag=0;
+    int custo=0, flag=0;
     while(!flag) {
         int visitado = pilha[--topo];
-        int menor = 100, indice = visitado;
+        int distancias[g->Gmax], indices[g->Gmax], k=0;
         for(No *j = g->adj[visitado]; j != NULL; j = j->prox) {
-            if(menor > distanciasRel[j->dest]) {
-                menor = distanciasRel[j->dest];
-                indice = j->dest;
+            if(!visitados[j->dest]) {
+                indices[k] = j->dest;
+                distancias[k] = distanciasRel[j->dest];
+                k++;
             }
-            if(j->dest == dest) {
+            printf("Dist %d : %d\n", j->dest, distanciasRel[j->dest]);
+        }
+        int menor = distancias[0], index = 0;
+        for(int i=0; i<k; i++) {
+            if(indices[i] == dest) {
                 flag = 1;
+            } else{
+                if(menor > distancias[i] && !visitados[indices[i]]) {
+                    menor = distancias[i];
+                    index = i;
+                }
             }
         }
-        pilha[topo++] = indice;
-        custo += menor;
+        if(!flag) {
+            printf("Escolhido: %d\n", indices[index]);
+            printf("Custo no escolhido: %d\n", menor);
+            pilha[topo++] = indices[index];
+            visitados[indices[index]] = 1;
+            custo += menor;
+        }
     }
     return custo;
 }
 
+void imprimePesos(Grafo g) {
+    printf("=====IMPRIME-PESOS=====\n");
+    if(g == NULL)
+        return;
+    for(int j=0; j<g->Gmax; j++) {
+        printf("Lista de adjacencias do %d\n", j);
+        for(No *i = g->adj[j]; i != NULL; i = i->prox) {
+            printf("Peso da aresta: %d\n", i->peso);
+        }
+    }
+    printf("FIM\n");
+}
+
 int heuristica(Grafo g, int orig, int dest, int distanciasRel[]) {
+    printf("=====HEURISTICA=====\n");
     if(g == NULL)
         return 0;
     if(orig == dest)
@@ -187,30 +222,56 @@ int heuristica(Grafo g, int orig, int dest, int distanciasRel[]) {
     }
     visitados[orig] = 1;
     pilha[topo++] = orig;
-    int custo = distanciasRel[orig], flag=0;
+    int custo = 0, flag=0;
     while(!flag) {
         int visitado = pilha[--topo];
-        int menor = 100, indice = visitado;
+        int distanciasPonderadas[g->Gmax], indices[g->Gmax], k=0;
         for(No *j = g->adj[visitado]; j != NULL; j = j->prox) {
-            
+            if(!visitados[j->dest]) {
+                indices[k] = j->dest;
+                distanciasPonderadas[k] = j->peso + distanciasRel[j->dest];
+                k++;
+            }
+            printf("Dist ponderada %d : %d\n", j->dest, j->peso + distanciasRel[j->dest]);
+        }
+        int menor = distanciasPonderadas[0], index = 0;
+        for(int i = 0; i<k; i++) {
+            if(indices[i] == dest) {
+                flag = 1;
+            } else{
+                if(menor > distanciasPonderadas[i] && !visitados[indices[i]]) {
+                    menor = distanciasPonderadas[i];
+                    index = i;
+                }
+            }
+        }
+        if(!flag) {
+            printf("Escolhido: %d\n", indices[index]);
+            printf("Custo no escolhido: %d\n", menor);
+            pilha[topo++] = indices[index];
+            visitados[indices[index]] = 1;
+            custo += menor;
         }
     }
+    return custo;
 }
 
 int main()
 {
     Grafo g = init(5);
     printf("%d\n", inserirAdj(g, 0, 1, 6));
-    printf("%d\n", inserirAdj(g, 0, 2, 6));
-    printf("%d\n", inserirAdj(g, 0, 3, 6));
-    printf("%d\n", inserirAdj(g, 1, 3, 4));
-    printf("%d\n", inserirAdj(g, 3, 2, 3));
+    printf("%d\n", inserirAdj(g, 0, 4, 8));
+    printf("%d\n", inserirAdj(g, 4, 3, 2));
+    printf("%d\n", inserirAdj(g, 1, 3, 3));
+    printf("%d\n", inserirAdj(g, 1, 2, 4));
+    printf("%d\n", inserirAdj(g, 2, 3, 3));
     printf("%d\n", inserirAdj(g, 2, 4, 7));
     printf("%d\n", inserirAdj(g, 1, 4, 5));
     printf("%d\n", inserirAdj(g, 3, 4, 5));
     //dfs(g, 0, 4);
     bfs(g, 0, 4);
     int distanciasRel[5];
-    inserindoDistanciasRelativas(g, 4, distanciasRel);
-    printf("Custo: %d\n", gulosa(g, 0, 4, distanciasRel));
+    inserindoDistanciasRelativas(g, 3, distanciasRel);
+    printf("Custo guloso: %d\n", gulosa(g, 0, 3, distanciasRel));
+    printf("Custo heuristica: %d\n", heuristica(g, 0, 3, distanciasRel));
 }
